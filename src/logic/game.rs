@@ -155,6 +155,30 @@ impl Game {
     }
 
     fn tick(&mut self, delta_time: f32) {
-        
+        let transforms = &self.transforms;
+        let world = &self.world;
+        let manager = &self.manager;
+        let delta_time = Arc::new(delta_time);
+        self.thread_pool.scoped(|scope| {
+            let beings = world.read().expect("Unable to Read World in Tick in Game").get_beings();
+            for entry in beings.read().expect("Unable to Read Beings in Tick in Game").iter() {
+                let being = entry.1.clone();
+                let world = world.clone();
+                let transforms = transforms.clone();
+                let delta_time = delta_time.clone();
+                scope.execute(move || {
+                    being.read().expect("Unable to Read Being in Tick in Game").tick_prep(&delta_time, &world.read().expect("Unable to Read World in Tick in Game"), &transforms.read().expect("Unable to Read Transforms in Tick in Game"));
+                });
+            }
+            for entry in beings.read().expect("Unable to Read Beings in Tick in Game").iter() {
+                let being = entry.1.clone();
+                let world = world.clone();
+                let transforms = transforms.clone();
+                let manager = manager.clone();
+                scope.execute(move || {
+                    being.write().expect("Unable to Write Being in Tick in Game").tick(world, transforms, manager);
+                });
+            }
+        });
     }
 }

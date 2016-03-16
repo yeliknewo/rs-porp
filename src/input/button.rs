@@ -6,6 +6,7 @@ pub struct Button {
     state: ButtonState,
 }
 
+#[allow(dead_code)]
 impl Button {
     pub fn new(tick_number: u64, state: ButtonState) -> Button {
         Button {
