@@ -7,12 +7,13 @@ extern crate rand;
 extern crate num;
 
 mod math;
-mod keyboard;
-mod game;
-mod world;
+mod input;
+mod logic;
 mod graphics;
-mod ids;
-mod being;
+mod utils;
 
 pub use self::math::{Mat4, Vec2, Vec3, Vec4};
-pub use self::keyboard::{Keyboard};
+pub use self::input::{Keyboard, Mouse, Display};
+pub use self::graphics::{Window, Frame, WindowArgs, Transforms, Entity, Vertex, init_vertex, ID, IDType, IDManager};
+pub use self::logic::{Being, Game, World};
+pub use self::utils::{KeyCode, ButtonState, MouseButton};

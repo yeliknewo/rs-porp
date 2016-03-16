@@ -27,14 +27,6 @@ impl Display for ID {
 
 #[derive(Copy, Clone, Eq, Hash, PartialEq)]
 pub enum IDType {
-    Entity(EntityIDType),
-    EntityContainer,
-    Being,
-    World,
-}
-
-#[derive(Copy, Clone, Eq, Hash, PartialEq)]
-pub enum EntityIDType {
     Vertex,
     Index,
     Texture,

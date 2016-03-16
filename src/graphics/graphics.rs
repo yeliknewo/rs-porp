@@ -9,7 +9,7 @@ use std::collections::{HashMap};
 use std::sync::{Arc, RwLock};
 
 use math::{Mat4, Vec2, Vec3, Vec4};
-use ids::{ID, IDType, EntityIDType, IDManager};
+use graphics::{ID, IDType, IDManager};
 
 pub type Index = u32;
 
@@ -151,6 +151,7 @@ pub enum CullingMethod {
     CounterClockwise,
 }
 
+#[allow(dead_code)]
 pub fn method_to_parameters(method: DrawMethod) -> DrawParameters<'static> {
     match method {
         DrawMethod::Both(depth, cull) => {
@@ -344,13 +345,13 @@ pub struct Entity {
 impl Entity {
     pub fn new(manager: Arc<RwLock<IDManager>>) -> Entity {
         Entity {
-            texture_id: ID::new(manager.clone(), IDType::Entity(EntityIDType::Texture)),
-            vertex_id: ID::new(manager.clone(), IDType::Entity(EntityIDType::Vertex)),
-            index_id: ID::new(manager.clone(), IDType::Entity(EntityIDType::Index)),
-            draw_parameters_id: ID::new(manager.clone(), IDType::Entity(EntityIDType::DrawParameter)),
-            perspective_id: ID::new(manager.clone(), IDType::Entity(EntityIDType::Perspective)),
-            view_id: ID::new(manager.clone(), IDType::Entity(EntityIDType::View)),
-            model_id: ID::new(manager.clone(), IDType::Entity(EntityIDType::Model)),
+            texture_id: ID::new(manager.clone(), IDType::Texture),
+            vertex_id: ID::new(manager.clone(), IDType::Vertex),
+            index_id: ID::new(manager.clone(), IDType::Index),
+            draw_parameters_id: ID::new(manager.clone(), IDType::DrawParameter),
+            perspective_id: ID::new(manager.clone(), IDType::Perspective),
+            view_id: ID::new(manager.clone(), IDType::View),
+            model_id: ID::new(manager.clone(), IDType::Model),
         }
     }
 
@@ -367,55 +368,55 @@ impl Entity {
         }
     }
 
-    pub fn use_old_id(&mut self, other_arc: &Arc<RwLock<Entity>>, id_type: EntityIDType) {
+    pub fn use_old_id(&mut self, other_arc: &Arc<RwLock<Entity>>, id_type: IDType) {
         let other = other_arc.read().expect("Unable to Read Other in Use Other ID");
         match id_type {
-            EntityIDType::Vertex => {
+            IDType::Vertex => {
                 self.vertex_id = other.vertex_id;
             },
-            EntityIDType::Index => {
+            IDType::Index => {
                 self.index_id = other.index_id;
             },
-            EntityIDType::Texture => {
+            IDType::Texture => {
                 self.texture_id = other.texture_id;
             },
-            EntityIDType::DrawParameter => {
+            IDType::DrawParameter => {
                 self.draw_parameters_id = other.draw_parameters_id;
             },
-            EntityIDType::Perspective => {
+            IDType::Perspective => {
                 self.perspective_id = other.perspective_id;
             },
-            EntityIDType::View => {
+            IDType::View => {
                 self.view_id = other.view_id;
             },
-            EntityIDType::Model => {
+            IDType::Model => {
                 self.model_id = other.model_id;
-            }
+            },
         };
     }
 
-    pub fn use_new_id(&mut self, manager: Arc<RwLock<IDManager>>, id_type: EntityIDType) {
-        let id = ID::new(manager, IDType::Entity(id_type));
+    pub fn use_new_id(&mut self, manager: Arc<RwLock<IDManager>>, id_type: IDType) {
+        let id = ID::new(manager, id_type);
         match id_type {
-            EntityIDType::Vertex => {
+            IDType::Vertex => {
                 self.vertex_id = id;
             },
-            EntityIDType::Index => {
+            IDType::Index => {
                 self.index_id = id;
             },
-            EntityIDType::Texture => {
+            IDType::Texture => {
                 self.texture_id = id;
             },
-            EntityIDType::DrawParameter => {
+            IDType::DrawParameter => {
                 self.draw_parameters_id = id;
             },
-            EntityIDType::Perspective => {
+            IDType::Perspective => {
                 self.perspective_id = id;
             },
-            EntityIDType::View => {
+            IDType::View => {
                 self.view_id = id;
             },
-            EntityIDType::Model => {
+            IDType::Model => {
                 self.model_id = id;
             },
         }

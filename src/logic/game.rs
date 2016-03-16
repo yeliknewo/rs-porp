@@ -8,35 +8,32 @@ use glium::glutin::VirtualKeyCode as GliumKeyCode;
 use scoped_threadpool::{Pool};
 use time::{precise_time_s};
 
-use ids::{ID, IDManager, IDType};
-use world::{World};
-use graphics::{Window, Transforms, method_to_parameters};
-use being::{Being};
+use graphics::{ID, IDManager, IDType, Transforms, Window};
+use logic::{World, Being};
 use math::{Vec2};
-use keyboard::{Keyboard};
+use input::{Keyboard, Mouse, Button, Display};
 
 pub struct Game {
     world: Arc<RwLock<World>>,
     thread_pool: Pool,
-    resolution: Vec2,
-    aspect_ratio: f32,
-    mouse_pos: Vec2,
+    display: Arc<RwLock<Display>>,
+    mouse: Arc<RwLock<Mouse>>,
     keyboard: Arc<RwLock<Keyboard>>,
-    mouse_buttons: HashMap<GliumMouseButton, GliumElementState>,
     transforms: Arc<RwLock<Transforms>>,
     manager: Arc<RwLock<IDManager>>,
 }
 
 impl Game {
     pub fn new(manager: IDManager, thread_count: u32, resolution: Vec2) -> Game {
+        let keyboard = Arc::new(RwLock::new(Keyboard::new()));
+        let mouse = Arc::new(RwLock::new(Mouse::new()));
+        let display = Arc::new(RwLock::new(Display::new(resolution)));
         Game {
-            world: Arc::new(RwLock::new(World::new())),
+            world: Arc::new(RwLock::new(World::new(keyboard.clone(), mouse.clone(), display.clone()))),
             thread_pool: Pool::new(thread_count),
-            aspect_ratio: resolution[0] / resolution[1],
-            resolution: resolution,
-            mouse_pos: Vec2::zero(),
-            keyboard: Arc::new(RwLock::new(Keyboard::new())),
-            mouse_buttons: HashMap::new(),
+            display: display,
+            mouse: mouse,
+            keyboard: keyboard,
             transforms: Arc::new(RwLock::new(Transforms::new())),
             manager: Arc::new(RwLock::new(manager)),
         }
@@ -50,29 +47,20 @@ impl Game {
         println!("Resumed");
     }
 
-    fn update_keyboard(&mut self, key_code: GliumKeyCode, element_state: GliumElementState) {
-        self.keyboard.set_key_state(key_code, element_state);
-        self.world.write().expect("Unable to Write World in Update Mouse Pos").update_keyboard(key_code, element_state);
+    fn update_keyboard(&mut self, tick_number: u64, key_code: GliumKeyCode, element_state: GliumElementState) {
+        self.keyboard.write().expect("Unable to Write Keyboard in Update Keyboard in Game").set_key_state(key_code, Button::new(tick_number, element_state));
     }
 
-    fn update_mouse_button(&mut self, mouse_button: GliumMouseButton, element_state: GliumElementState, ) {
-        self.mouse_buttons.insert(mouse_button, element_state);
-        self.worlds.get(&self.active_world_id).expect("Unable to Get Active World in Update Mouse Button").write().expect("Unable to Write Active World in Update Mouse Button").update_mouse_button(mouse_button, element_state);
+    fn update_mouse_button(&mut self, tick_number: u64, mouse_button: GliumMouseButton, element_state: GliumElementState, ) {
+        self.mouse.write().expect("Unable to Write Mouse in Update Mouse Button in Game").set_mouse_button(mouse_button, Button::new(tick_number, element_state));
     }
 
     fn update_mouse_pos(&mut self, mouse_pos: (i32, i32)) {
-        let x = mouse_pos.0 as f32;
-        let y = mouse_pos.1 as f32;
-        self.mouse_pos = Vec2::from([x, y]);
-        self.worlds.get(&self.active_world_id).expect("Unable to Get Active World in Update Mouse Pos").write().expect("Unable to Write Active World in Update Mouse Pos").update_mouse_pos(self.mouse_pos);
+        self.mouse.write().expect("Unable to Write Mouse in Update Mouse Pos in Game").set_mouse_position(Vec2::from([mouse_pos.0 as f32, mouse_pos.1 as f32]));
     }
 
     fn update_resolution(&mut self, resolution: (u32, u32)) {
-        let width = resolution.0 as f32;
-        let height = resolution.1 as f32;
-        self.resolution = Vec2::from([width, height]);
-        self.aspect_ratio = width / height;
-        self.worlds.get(&self.active_world_id).expect("Unable to Get Active World in Update Resolution").write().expect("Unable to Write Active World in Update Resolution").update_resolution(self.resolution, self.aspect_ratio);
+        self.display.write().expect("Unable to Write Display in Update Resolution in Game").set_resolution(Vec2::from([resolution.0 as f32, resolution.1 as f32]));
     }
 
     pub fn run(&mut self, window: &mut Window) {
@@ -86,6 +74,8 @@ impl Game {
 
         let mut frames: u64 = 0;
         let mut ticks: u64 = 0;
+
+        let mut tick_number: u64 = 0;
 
         loop {
             let now = precise_time_s();
@@ -113,14 +103,14 @@ impl Game {
                             }
                         },
                         WindowEvent::KeyboardInput(element_state, _, virtual_key_code) => match virtual_key_code {
-                            Some(virtual_key_code) => self.update_keyboard(virtual_key_code, element_state),
+                            Some(virtual_key_code) => self.update_keyboard(tick_number, virtual_key_code, element_state),
                             None => (),
                         },
                         WindowEvent::MouseMoved(pos) => self.update_mouse_pos(pos),
                         // WindowEvent::MouseWheel(mouse_scroll_data) => {
                         //
                         // },
-                        WindowEvent::MouseInput(element_state, mouse_button) => self.update_mouse_button(mouse_button, element_state),
+                        WindowEvent::MouseInput(element_state, mouse_button) => self.update_mouse_button(tick_number, mouse_button, element_state),
                         // WindowEvent::Awakened => {
                         //
                         // },
@@ -136,12 +126,10 @@ impl Game {
                         _ => (),
                     }
                 }
-                {
-                    let tps_f32 = tps_s as f32;
-                    let events = self.tick(tps_f32);
-                }
+                self.tick(tps_s as f32);
                 delta_time -= tps_s;
                 ticks += 1;
+                tick_number += 1;
             }
             self.render(window);
             frames += 1;
@@ -156,7 +144,8 @@ impl Game {
 
     fn render(&mut self, window: &mut Window) {
         let mut frame = window.frame();
-        for entry in self.worlds.get(&self.active_world_id).expect("Unable to Get Active World in Render").read().expect("Unable to Read World when rendering").get_beings() {
+        let beings = self.world.read().expect("Unable to Read World in Render in Game").get_beings();
+        for entry in beings.read().expect("Unable to Read Beings in Render in Game").iter() {
             let being = entry.1;
             for entity in being.read().expect("Unable to Read Being when rendering").get_entities() {
                 frame.draw_entity(entity.1, &self.transforms);
@@ -166,6 +155,6 @@ impl Game {
     }
 
     fn tick(&mut self, delta_time: f32) {
-
+        
     }
 }
