@@ -2,19 +2,19 @@ use std::sync::{Arc, RwLock};
 use std::collections::{HashMap};
 
 use input::{Keyboard, Mouse, Display, Button};
-use logic::{Being};
+use logic::{Being, BeingType};
 use utils::{KeyCode, MouseButton};
 use math::{Vec2};
 
-pub struct World {
+pub struct World<T: BeingType> {
     keyboard: Arc<RwLock<Keyboard>>,
     mouse: Arc<RwLock<Mouse>>,
     display: Arc<RwLock<Display>>,
-    beings: Arc<RwLock<HashMap<u64, Arc<RwLock<Box<Being>>>>>>,
+    beings: Arc<RwLock<HashMap<u64, Arc<RwLock<Box<Being<T>>>>>>>,
 }
 
-impl World {
-    pub fn new(keyboard: Arc<RwLock<Keyboard>>, mouse: Arc<RwLock<Mouse>>, display: Arc<RwLock<Display>>) -> World {
+impl<T: BeingType> World<T> {
+    pub fn new(keyboard: Arc<RwLock<Keyboard>>, mouse: Arc<RwLock<Mouse>>, display: Arc<RwLock<Display>>) -> World<T> {
         World {
             keyboard: keyboard,
             mouse: mouse,
@@ -23,7 +23,7 @@ impl World {
         }
     }
 
-    pub fn get_beings(&self) -> Arc<RwLock<HashMap<u64, Arc<RwLock<Box<Being>>>>>> {
+    pub fn get_beings(&self) -> Arc<RwLock<HashMap<u64, Arc<RwLock<Box<Being<T>>>>>>> {
         self.beings.clone()
     }
 

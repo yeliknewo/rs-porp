@@ -7,12 +7,12 @@ use scoped_threadpool::{Pool};
 use time::{precise_time_s};
 
 use graphics::{IDManager, Transforms, Window};
-use logic::{World, Being};
+use logic::{World, Being, BeingType};
 use math::{Vec2};
 use input::{Keyboard, Mouse, Button, Display};
 
-pub struct Game {
-    world: Arc<RwLock<World>>,
+pub struct Game<T: BeingType> {
+    world: Arc<RwLock<World<T>>>,
     thread_pool: Pool,
     display: Arc<RwLock<Display>>,
     mouse: Arc<RwLock<Mouse>>,
@@ -21,8 +21,8 @@ pub struct Game {
     manager: Arc<RwLock<IDManager>>,
 }
 
-impl Game {
-    pub fn new(manager: IDManager, thread_count: u32, resolution: Vec2) -> Game {
+impl<T: BeingType> Game<T> {
+    pub fn new(manager: Arc<RwLock<IDManager>>, thread_count: u32, resolution: Vec2) -> Game<T> {
         let keyboard = Arc::new(RwLock::new(Keyboard::new()));
         let mouse = Arc::new(RwLock::new(Mouse::new()));
         let display = Arc::new(RwLock::new(Display::new(resolution)));
@@ -33,8 +33,12 @@ impl Game {
             mouse: mouse,
             keyboard: keyboard,
             transforms: Arc::new(RwLock::new(Transforms::new())),
-            manager: Arc::new(RwLock::new(manager)),
+            manager: manager,
         }
+    }
+
+    pub fn get_world(&self) -> Arc<RwLock<World<T>>> {
+        self.world.clone()
     }
 
     fn pause(&mut self) {

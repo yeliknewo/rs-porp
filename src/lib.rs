@@ -6,6 +6,8 @@ extern crate scoped_threadpool;
 extern crate rand;
 extern crate num;
 
+use std::sync::{Arc, RwLock};
+
 mod math;
 mod input;
 mod logic;
@@ -15,10 +17,10 @@ mod utils;
 pub use self::math::{Mat4, Vec2, Vec3, Vec4};
 pub use self::input::{Keyboard, Mouse, Display};
 pub use self::graphics::{DrawMethod, Window, Frame, WindowArgs, Transforms, Entity, Vertex, Index, init_vertex, ID, IDType, IDManager};
-pub use self::logic::{Being, Game, World, RenderUpdateData};
+pub use self::logic::{Being, BeingType, Game, World, RenderUpdateData};
 pub use self::utils::{KeyCode, ButtonState, MouseButton};
 
-pub fn init() -> IDManager {
+pub fn init() -> Arc<RwLock<IDManager>> {
     graphics::init_vertex();
-    IDManager::new()
+    Arc::new(RwLock::new(IDManager::new()))
 }

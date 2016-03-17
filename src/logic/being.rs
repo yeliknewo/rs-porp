@@ -5,15 +5,18 @@ use math::{Vec3};
 use graphics::{Entity, Transforms, IDManager, Window, Vertex, Index, DrawMethod, method_to_parameters};
 use logic::{World};
 
-pub trait Being : Send + Sync {
+pub trait BeingType { }
+
+pub trait Being<T: BeingType> : Send + Sync {
     fn get_entities(&self) -> &HashMap<u64, Arc<RwLock<Entity>>>;
     fn get_render_updates(&self) -> Arc<RwLock<RenderUpdateData>>;
-    fn tick_prep(&self, &f32, &World, &Transforms);
-    fn tick(&mut self, Arc<RwLock<World>>, Arc<RwLock<Transforms>>, Arc<RwLock<IDManager>>);
+    fn tick_prep(&self, &f32, &World<T>, &Transforms);
+    fn tick(&mut self, Arc<RwLock<World<T>>>, Arc<RwLock<Transforms>>, Arc<RwLock<IDManager>>);
     fn render(&mut self, window: &mut Window) {
         self.update_vertices(window);
         self.update_indices(window);
     }
+    fn get_type(&self) -> T;
     fn get_position(&self) -> Vec3;
     fn update_vertices(&self, window: &mut Window) {
         let updates = self.get_render_updates();
