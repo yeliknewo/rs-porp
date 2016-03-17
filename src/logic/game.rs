@@ -1,6 +1,4 @@
-use std::collections::{HashMap};
 use std::sync::{Arc, RwLock};
-use std::sync::atomic::{AtomicBool, Ordering};
 use glium::glutin::Event as WindowEvent;
 use glium::glutin::ElementState as GliumElementState;
 use glium::glutin::MouseButton as GliumMouseButton;
@@ -8,7 +6,7 @@ use glium::glutin::VirtualKeyCode as GliumKeyCode;
 use scoped_threadpool::{Pool};
 use time::{precise_time_s};
 
-use graphics::{ID, IDManager, IDType, Transforms, Window};
+use graphics::{IDManager, Transforms, Window};
 use logic::{World, Being};
 use math::{Vec2};
 use input::{Keyboard, Mouse, Button, Display};
@@ -143,11 +141,14 @@ impl Game {
     }
 
     fn render(&mut self, window: &mut Window) {
-        let mut frame = window.frame();
         let beings = self.world.read().expect("Unable to Read World in Render in Game").get_beings();
         for entry in beings.read().expect("Unable to Read Beings in Render in Game").iter() {
+            entry.1.write().expect("Unable to Write Being in Render in Game").render(window);
+        }
+        let mut frame = window.frame();
+        for entry in beings.read().expect("Unable to Read Beings in Render in Game").iter() {
             let being = entry.1;
-            for entity in being.read().expect("Unable to Read Being when rendering").get_entities() {
+            for entity in being.read().expect("Unable to Read Being in Render in Game").get_entities() {
                 frame.draw_entity(entity.1, &self.transforms);
             }
         }
